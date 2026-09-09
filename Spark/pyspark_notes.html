@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PySpark — Complete Interview Notes</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  *{box-sizing:border-box;}
+  body{
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    color:#182233;
+    font-size:10.7pt;
+    line-height:1.55;
+    margin:0;
+  }
+  :root{
+    --ink:#132038;
+    --soft:#5A6478;
+    --trace:#1C7F97;
+    --trace-bg:#E7F2F4;
+    --warn:#C97A25;
+    --warn-bg:#FBF0DF;
+    --good:#3B7A52;
+    --good-bg:#E5F1E8;
+    --rule:#D9D4C6;
+    --code-bg:#F1EFE6;
+  }
+  h1.doctitle{
+    font-size:23pt; color:var(--ink); margin:0 0 2px; letter-spacing:.2px;
+  }
+  .subtitle{color:var(--soft); font-size:10.5pt; margin:0 0 14px; font-style:italic;}
+  h2{
+    font-size:14pt; color:#fff; background:var(--ink);
+    padding:6px 10px; margin:26px 0 10px; letter-spacing:.3px;
+    page-break-after:avoid;
+  }
+  h3{
+    font-size:11.7pt; color:var(--trace); margin:16px 0 6px;
+    border-bottom:2px solid var(--trace); padding-bottom:3px;
+    page-break-after:avoid;
+  }
+  p{margin:6px 0;}
+  b, strong{color:var(--ink);}
+  .lead{font-size:11pt; background:var(--trace-bg); border-left:4px solid var(--trace); padding:8px 12px; margin:8px 0 14px;}
+  table{border-collapse:collapse; width:100%; margin:8px 0 14px; font-size:9.8pt;}
+  th{background:var(--ink); color:#fff; text-align:left; padding:5px 8px;}
+  td{border:1px solid var(--rule); padding:5px 8px; vertical-align:top;}
+  tr:nth-child(even) td{background:#FAF9F4;}
+  code{
+    font-family:'Courier New', monospace; background:var(--code-bg);
+    padding:1px 4px; border-radius:3px; font-size:9.6pt;
+  }
+  pre{
+    background:#1C2536; color:#E9EDF5; padding:10px 13px; border-radius:6px;
+    font-family:'Courier New', monospace; font-size:9.3pt; line-height:1.5;
+    overflow-x:auto; page-break-inside:avoid; margin:8px 0 14px;
+  }
+  pre code{background:none; color:inherit; padding:0;}
+  .callout{
+    display:flex; gap:8px; padding:8px 11px; margin:10px 0; border-radius:5px;
+    font-size:9.8pt; page-break-inside:avoid;
+  }
+  .callout b.tag{font-size:8pt; letter-spacing:.5px; flex-shrink:0;}
+  .callout.trap{background:var(--warn-bg); border-left:4px solid var(--warn);}
+  .callout.trap b.tag{color:var(--warn);}
+  .callout.model{background:var(--good-bg); border-left:4px solid var(--good);}
+  .callout.model b.tag{color:var(--good);}
+  .diagram{
+    background:#FBFAF5; border:1px solid var(--rule); border-radius:6px;
+    padding:12px 8px 6px; margin:10px 0 16px; text-align:center;
+    page-break-inside:avoid;
+  }
+  .diagram .cap{font-size:8.7pt; color:var(--soft); margin-top:4px; font-style:italic;}
+  .qa{margin:8px 0; page-break-inside:avoid;}
+  .qa .q{font-weight:bold; color:var(--ink);}
+  .qa .a{color:var(--soft); margin-left:14px;}
+  .footer-note{
+    margin-top:22px; padding:10px 14px; background:var(--ink); color:#E4E8F0;
+    border-radius:6px; font-size:9.8pt;
+  }
+  .toc{columns:2; column-gap:26px; font-size:9.8pt; margin-bottom:10px;}
+  .toc div{margin-bottom:3px;}
+  svg text{font-family:'Helvetica Neue', Arial, sans-serif;}
+</style>
+</head>
+<body>
+
+<h1 class="doctitle">PySpark — Complete Interview Notes</h1>
+<p class="subtitle">For a Data Engineer interview · read once top to bottom, then use headers as flash-card prompts</p>
+
+<div class="toc">
+<div>1. Spark Architecture</div>
+<div>6. Caching &amp; Persistence</div>
+<div>2. RDD vs DataFrame vs Dataset</div>
+<div>7. Shuffles — narrow vs wide</div>
+<div>3. DataFrames — the workhorse</div>
+<div>8. Optimization checklist</div>
+<div>4. Coalesce vs Repartition</div>
+<div>9. Quick-fire Q&amp;A</div>
+<div>5. Data Skew — AQE &amp; Broadcast Joins</div>
+<div>10. One-page cheat sheet</div>
+</div>
+
+<!-- ============ SECTION 1 ============ -->
+<h2>1&nbsp;&nbsp;Spark Architecture — the mental model</h2>
+<p class="lead"><b>Core idea:</b> Spark is a driver that plans work, and executors that run it, coordinated by a cluster manager.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 760 260" width="100%" height="260">
+  <defs><marker id="a1" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#1C7F97"/></marker></defs>
+  <!-- driver box -->
+  <rect x="20" y="15" width="300" height="110" rx="6" fill="#fff" stroke="#132038" stroke-width="1.6"/>
+  <text x="170" y="32" text-anchor="middle" font-size="11" font-weight="bold" fill="#132038">DRIVER PROGRAM</text>
+  <rect x="34" y="42" width="272" height="24" rx="3" fill="#E7F2F4" stroke="#1C7F97"/>
+  <text x="170" y="58" text-anchor="middle" font-size="9.5" fill="#132038">SparkSession / SparkContext</text>
+  <rect x="34" y="70" width="272" height="24" rx="3" fill="#E7F2F4" stroke="#1C7F97"/>
+  <text x="170" y="86" text-anchor="middle" font-size="9.5" fill="#132038">DAG Scheduler → splits into STAGES</text>
+  <rect x="34" y="98" width="272" height="24" rx="3" fill="#E7F2F4" stroke="#1C7F97"/>
+  <text x="170" y="114" text-anchor="middle" font-size="9.5" fill="#132038">Task Scheduler → sends TASKS</text>
+
+  <!-- cluster manager -->
+  <rect x="330" y="55" width="140" height="46" rx="6" fill="#FBF0DF" stroke="#C97A25" stroke-width="1.6"/>
+  <text x="400" y="74" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#8a5716">CLUSTER</text>
+  <text x="400" y="88" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#8a5716">MANAGER</text>
+
+  <!-- executors -->
+  <rect x="500" y="15" width="240" height="55" rx="6" fill="#fff" stroke="#132038" stroke-width="1.6"/>
+  <text x="620" y="30" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#132038">Worker Node 1</text>
+  <rect x="512" y="36" width="100" height="22" rx="3" fill="#E5F1E8" stroke="#3B7A52"/>
+  <text x="562" y="51" text-anchor="middle" font-size="8.7" fill="#132038">Executor 1</text>
+  <rect x="618" y="36" width="106" height="22" rx="3" fill="#F1EFE6" stroke="#999"/>
+  <text x="671" y="51" text-anchor="middle" font-size="8.7" fill="#132038">Cache/Storage</text>
+
+  <rect x="500" y="80" width="240" height="55" rx="6" fill="#fff" stroke="#132038" stroke-width="1.6"/>
+  <text x="620" y="95" text-anchor="middle" font-size="9.5" font-weight="bold" fill="#132038">Worker Node 2</text>
+  <rect x="512" y="101" width="100" height="22" rx="3" fill="#E5F1E8" stroke="#3B7A52"/>
+  <text x="562" y="116" text-anchor="middle" font-size="8.7" fill="#132038">Executor 2</text>
+  <rect x="618" y="101" width="106" height="22" rx="3" fill="#F1EFE6" stroke="#999"/>
+  <text x="671" y="116" text-anchor="middle" font-size="8.7" fill="#132038">Cache/Storage</text>
+
+  <!-- arrows -->
+  <path d="M320,75 L328,75" stroke="#1C7F97" stroke-width="2" marker-end="url(#a1)" fill="none"/>
+  <text x="322" y="68" font-size="8" fill="#1C7F97">1. request resources</text>
+  <path d="M470,68 C480,50 490,40 498,38" stroke="#1C7F97" stroke-width="2" marker-end="url(#a1)" fill="none"/>
+  <path d="M470,85 C480,100 490,110 498,110" stroke="#1C7F97" stroke-width="2" marker-end="url(#a1)" fill="none"/>
+  <text x="474" y="150" font-size="8" fill="#1C7F97">2. launches executors</text>
+
+  <path d="M300,130 C340,175 440,178 505,150" stroke="#1C7F97" stroke-width="2" marker-end="url(#a1)" fill="none" stroke-dasharray="4 3"/>
+  <text x="330" y="192" font-size="8" fill="#1C7F97">3. sends tasks</text>
+  <path d="M505,160 C440,205 340,205 305,150" stroke="#5A6478" stroke-width="2" marker-end="url(#a1)" fill="none" stroke-dasharray="4 3"/>
+  <text x="330" y="222" font-size="8" fill="#5A6478">4. results / status back</text>
+</svg>
+<div class="cap">Driver plans &amp; coordinates · Cluster Manager allocates resources · Executors do the actual work</div>
+</div>
+
+<h3>Job → Stage → Task hierarchy</h3>
+<div class="diagram">
+<svg viewBox="0 0 700 90" width="100%" height="90">
+  <defs><marker id="a2" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#132038"/></marker></defs>
+  <rect x="10" y="20" width="140" height="50" rx="6" fill="#132038"/>
+  <text x="80" y="42" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">APPLICATION</text>
+  <text x="80" y="58" text-anchor="middle" font-size="8" fill="#cfd6e4">1 SparkSession</text>
+  <path d="M155,45 L195,45" stroke="#132038" stroke-width="2" marker-end="url(#a2)"/>
+  <rect x="200" y="20" width="140" height="50" rx="6" fill="#1C7F97"/>
+  <text x="270" y="42" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">JOB</text>
+  <text x="270" y="58" text-anchor="middle" font-size="8" fill="#dcf1f4">1 per action</text>
+  <path d="M345,45 L385,45" stroke="#132038" stroke-width="2" marker-end="url(#a2)"/>
+  <rect x="390" y="20" width="140" height="50" rx="6" fill="#3B7A52"/>
+  <text x="460" y="42" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">STAGE(S)</text>
+  <text x="460" y="58" text-anchor="middle" font-size="8" fill="#dcecdf">split at shuffles</text>
+  <path d="M535,45 L575,45" stroke="#132038" stroke-width="2" marker-end="url(#a2)"/>
+  <rect x="580" y="20" width="115" height="50" rx="6" fill="#C97A25"/>
+  <text x="637" y="42" text-anchor="middle" font-size="10" fill="#fff" font-weight="bold">TASKS</text>
+  <text x="637" y="58" text-anchor="middle" font-size="8" fill="#fbe8cc">1 per partition</text>
+</svg>
+<div class="cap">If you remember one sentence for architecture questions, it's this diagram.</div>
+</div>
+
+<table>
+<tr><th>Term</th><th>What it is</th></tr>
+<tr><td>Application</td><td>Your whole PySpark program, one SparkSession</td></tr>
+<tr><td>Job</td><td>Triggered by one <i>action</i> (e.g. <code>.collect()</code>, <code>.count()</code>, <code>.write()</code>)</td></tr>
+<tr><td>Stage</td><td>A chunk of a job with no shuffle inside it — a shuffle boundary creates a new stage</td></tr>
+<tr><td>Task</td><td>Smallest unit of work — one task runs on one partition, on one core</td></tr>
+</table>
+
+<div class="callout trap"><b class="tag">TRAP</b><span><b>"What happens if the driver dies?"</b> → the whole application dies (single point of failure). If an <i>executor</i> dies, Spark just reschedules its tasks elsewhere using the DAG lineage to recompute lost partitions.</span></div>
+
+<!-- ============ SECTION 2 ============ -->
+<h2>2&nbsp;&nbsp;RDD vs DataFrame vs Dataset</h2>
+<div class="diagram">
+<svg viewBox="0 0 620 70" width="100%" height="70">
+  <defs><marker id="a3" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#132038"/></marker></defs>
+  <rect x="10" y="15" width="170" height="42" rx="6" fill="#fff" stroke="#132038"/>
+  <text x="95" y="33" text-anchor="middle" font-size="9.5" font-weight="bold">RDD</text>
+  <text x="95" y="47" text-anchor="middle" font-size="7.8" fill="#5A6478">low-level, no schema, slow</text>
+  <path d="M185,36 L225,36" stroke="#132038" stroke-width="2" marker-end="url(#a3)"/>
+  <rect x="230" y="15" width="180" height="42" rx="6" fill="#E7F2F4" stroke="#1C7F97"/>
+  <text x="320" y="33" text-anchor="middle" font-size="9.5" font-weight="bold">DataFrame</text>
+  <text x="320" y="47" text-anchor="middle" font-size="7.8" fill="#5A6478">schema + Catalyst optimized</text>
+  <path d="M415,36 L455,36" stroke="#132038" stroke-width="2" marker-end="url(#a3)"/>
+  <rect x="460" y="15" width="150" height="42" rx="6" fill="#F1EFE6" stroke="#999"/>
+  <text x="535" y="33" text-anchor="middle" font-size="9.5" font-weight="bold">Dataset</text>
+  <text x="535" y="47" text-anchor="middle" font-size="7.8" fill="#5A6478">type-safe (Scala/Java only)</text>
+</svg>
+<div class="cap">PySpark has RDDs and DataFrames — <b>there is no Python Dataset</b> (Python is dynamically typed).</div>
+</div>
+
+<h3>Why DataFrames are fast: Catalyst + Tungsten</h3>
+<div class="diagram">
+<svg viewBox="0 0 780 60" width="100%" height="60">
+  <defs><marker id="a4" markerWidth="7" markerHeight="7" refX="5" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#132038"/></marker></defs>
+  <!-- 6 steps -->
+  <g font-size="7.6">
+  <rect x="0" y="15" width="115" height="32" rx="4" fill="#fff" stroke="#132038"/><text x="57" y="35" text-anchor="middle">Your code</text>
+  <path d="M115,31 L133,31" stroke="#132038" stroke-width="1.6" marker-end="url(#a4)"/>
+  <rect x="136" y="15" width="115" height="32" rx="4" fill="#fff" stroke="#132038"/><text x="193" y="30" text-anchor="middle">Unresolved</text><text x="193" y="40" text-anchor="middle">Logical Plan</text>
+  <path d="M251,31 L269,31" stroke="#132038" stroke-width="1.6" marker-end="url(#a4)"/>
+  <rect x="272" y="15" width="115" height="32" rx="4" fill="#fff" stroke="#132038"/><text x="329" y="30" text-anchor="middle">Resolved</text><text x="329" y="40" text-anchor="middle">Logical Plan</text>
+  <path d="M387,31 L405,31" stroke="#132038" stroke-width="1.6" marker-end="url(#a4)"/>
+  <rect x="408" y="15" width="120" height="32" rx="4" fill="#E7F2F4" stroke="#1C7F97"/><text x="468" y="30" text-anchor="middle">Optimized Plan</text><text x="468" y="40" text-anchor="middle">(pushdown, pruning)</text>
+  <path d="M528,31 L546,31" stroke="#132038" stroke-width="1.6" marker-end="url(#a4)"/>
+  <rect x="549" y="15" width="105" height="32" rx="4" fill="#fff" stroke="#132038"/><text x="601" y="30" text-anchor="middle">Physical Plan</text><text x="601" y="40" text-anchor="middle">(cost-based)</text>
+  <path d="M654,31 L672,31" stroke="#132038" stroke-width="1.6" marker-end="url(#a4)"/>
+  <rect x="675" y="15" width="105" height="32" rx="4" fill="#FBF0DF" stroke="#C97A25"/><text x="727" y="30" text-anchor="middle">Tungsten</text><text x="727" y="40" text-anchor="middle">bytecode + off-heap</text>
+  </g>
+</svg>
+</div>
+<p><b>Catalyst Optimizer</b> rewrites your logical query into an efficient plan (predicate pushdown, constant folding, column pruning). <b>Tungsten</b> is the physical execution engine — manages memory off-heap (avoids JVM GC overhead) and generates optimized bytecode at runtime.</p>
+
+<p><b>Lazy evaluation:</b> transformations (<code>filter</code>, <code>select</code>, <code>withColumn</code>, <code>join</code>, <code>groupBy</code>) don't run immediately — they build the logical plan. Nothing executes until an <b>action</b> is called. This lets Catalyst see the whole chain and optimize it globally.</p>
+
+<table>
+<tr><th>Transformations (lazy)</th><th>Actions (trigger execution)</th></tr>
+<tr><td><code>select</code>, <code>filter</code>/<code>where</code>, <code>withColumn</code>, <code>join</code>, <code>groupBy</code>, <code>orderBy</code>, <code>distinct</code>, <code>union</code></td>
+<td><code>show()</code>, <code>count()</code>, <code>collect()</code>, <code>take()</code>, <code>write.save()</code>, <code>foreach()</code></td></tr>
+</table>
+
+<!-- ============ SECTION 3 ============ -->
+<h2>3&nbsp;&nbsp;DataFrames — the workhorse</h2>
+<pre><code>from pyspark.sql import SparkSession
+from pyspark.sql import functions as F
+
+spark = SparkSession.builder.appName("interview").getOrCreate()
+df = spark.read.parquet("s3://bucket/orders/")
+
+df2 = (
+    df.filter(F.col("status") == "SHIPPED")
+      .withColumn("order_month", F.month("order_date"))
+      .groupBy("order_month")
+      .agg(F.sum("amount").alias("total_amount"))
+)
+
+df2.explain(True)   # ALWAYS know this — shows the physical/logical plan</code></pre>
+
+<p>Things you should be able to say fluently: <code>df.explain()</code> shows you the plan Catalyst chose. Schema is either <b>inferred</b> (<code>inferSchema=True</code>, slower — extra read pass) or <b>explicit</b> via <code>StructType</code> (faster, safer, preferred in production). <code>repartition()</code>, <code>coalesce()</code>, <code>cache()</code>, <code>persist()</code> are the four you'll be grilled on next.</p>
+
+<!-- ============ SECTION 4 ============ -->
+<h2>4&nbsp;&nbsp;Partitions — Coalesce vs Repartition</h2>
+<p class="lead">A DataFrame is split into partitions; each partition is processed by one task on one core. How many partitions you have controls parallelism.</p>
+
+<h3>repartition(n) — full shuffle, even distribution</h3>
+<div class="diagram">
+<svg viewBox="0 0 640 100" width="100%" height="100">
+  <defs><marker id="a5" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#1C7F97"/></marker></defs>
+  <g font-size="8">
+  <text x="90" y="16" text-anchor="middle" fill="#5A6478">8 partitions</text>
+  <rect x="10" y="24" width="40" height="30" fill="#fff" stroke="#132038"/><text x="30" y="43" text-anchor="middle">P1</text>
+  <rect x="55" y="24" width="40" height="30" fill="#fff" stroke="#132038"/><text x="75" y="43" text-anchor="middle">P2</text>
+  <rect x="100" y="24" width="40" height="30" fill="#fff" stroke="#132038"/><text x="120" y="43" text-anchor="middle">P3</text>
+  <rect x="145" y="24" width="40" height="30" fill="#fff" stroke="#132038"/><text x="165" y="43" text-anchor="middle">P4</text>
+  <rect x="10" y="58" width="40" height="30" fill="#fff" stroke="#132038"/><text x="30" y="77" text-anchor="middle">P5</text>
+  <rect x="55" y="58" width="40" height="30" fill="#fff" stroke="#132038"/><text x="75" y="77" text-anchor="middle">P6</text>
+  <rect x="100" y="58" width="40" height="30" fill="#fff" stroke="#132038"/><text x="120" y="77" text-anchor="middle">P7</text>
+  <rect x="145" y="58" width="40" height="30" fill="#fff" stroke="#132038"/><text x="165" y="77" text-anchor="middle">P8</text>
+  </g>
+  <path d="M195,55 L245,55" stroke="#1C7F97" stroke-width="2.4" marker-end="url(#a5)"/>
+  <text x="220" y="45" text-anchor="middle" font-size="7.6" fill="#1C7F97">SHUFFLE</text>
+  <text x="220" y="70" text-anchor="middle" font-size="7" fill="#5A6478">(network move)</text>
+  <g font-size="8">
+  <text x="440" y="16" text-anchor="middle" fill="#5A6478">4 EVEN partitions</text>
+  <rect x="360" y="30" width="60" height="45" fill="#E7F2F4" stroke="#1C7F97"/><text x="390" y="56" text-anchor="middle">P1</text>
+  <rect x="425" y="30" width="60" height="45" fill="#E7F2F4" stroke="#1C7F97"/><text x="455" y="56" text-anchor="middle">P2</text>
+  <rect x="490" y="30" width="60" height="45" fill="#E7F2F4" stroke="#1C7F97"/><text x="520" y="56" text-anchor="middle">P3</text>
+  <rect x="555" y="30" width="60" height="45" fill="#E7F2F4" stroke="#1C7F97"/><text x="585" y="56" text-anchor="middle">P4</text>
+  </g>
+</svg>
+</div>
+
+<h3>coalesce(n) — merges partitions, no full shuffle</h3>
+<div class="diagram">
+<svg viewBox="0 0 640 100" width="100%" height="100">
+  <defs><marker id="a6" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#C97A25"/></marker></defs>
+  <g font-size="8">
+  <text x="90" y="16" text-anchor="middle" fill="#5A6478">8 partitions</text>
+  <rect x="10" y="24" width="40" height="30" fill="#fff" stroke="#132038"/><text x="30" y="43" text-anchor="middle">P1</text>
+  <rect x="55" y="24" width="40" height="30" fill="#fff" stroke="#132038"/><text x="75" y="43" text-anchor="middle">P2</text>
+  <rect x="100" y="24" width="40" height="30" fill="#fff" stroke="#132038"/><text x="120" y="43" text-anchor="middle">P3</text>
+  <rect x="145" y="24" width="40" height="30" fill="#fff" stroke="#132038"/><text x="165" y="43" text-anchor="middle">P4</text>
+  <rect x="10" y="58" width="40" height="30" fill="#fff" stroke="#132038"/><text x="30" y="77" text-anchor="middle">P5</text>
+  <rect x="55" y="58" width="40" height="30" fill="#fff" stroke="#132038"/><text x="75" y="77" text-anchor="middle">P6</text>
+  <rect x="100" y="58" width="40" height="30" fill="#fff" stroke="#132038"/><text x="120" y="77" text-anchor="middle">P7</text>
+  <rect x="145" y="58" width="40" height="30" fill="#fff" stroke="#132038"/><text x="165" y="77" text-anchor="middle">P8</text>
+  </g>
+  <path d="M195,55 L245,55" stroke="#C97A25" stroke-width="2.4" marker-end="url(#a6)"/>
+  <text x="220" y="45" text-anchor="middle" font-size="7.6" fill="#C97A25">MERGE</text>
+  <text x="220" y="70" text-anchor="middle" font-size="7" fill="#5A6478">(no full shuffle)</text>
+  <g font-size="7.6">
+  <text x="470" y="16" text-anchor="middle" fill="#5A6478">4 UNEVEN partitions</text>
+  <rect x="360" y="26" width="90" height="55" fill="#FBF0DF" stroke="#C97A25"/><text x="405" y="57" text-anchor="middle">P1+P2 (large)</text>
+  <rect x="456" y="30" width="70" height="48" fill="#FBF0DF" stroke="#C97A25"/><text x="491" y="57" text-anchor="middle">P3+P4</text>
+  <rect x="532" y="36" width="45" height="36" fill="#FBF0DF" stroke="#C97A25"/><text x="554" y="57" text-anchor="middle">P5+6</text>
+  <rect x="583" y="40" width="40" height="28" fill="#FBF0DF" stroke="#C97A25"/><text x="603" y="57" text-anchor="middle">P7+8</text>
+  </g>
+</svg>
+</div>
+
+<table>
+<tr><th></th><th>coalesce()</th><th>repartition()</th></tr>
+<tr><td>Shuffle</td><td>No full shuffle</td><td>Full shuffle</td></tr>
+<tr><td>Can increase partitions?</td><td>No</td><td>Yes</td></tr>
+<tr><td>Partition sizes</td><td>Uneven</td><td>Even</td></tr>
+<tr><td>Cost</td><td>Cheap</td><td>Expensive</td></tr>
+<tr><td>Typical use</td><td>Reducing partitions before write</td><td>Increasing partitions / fixing skew / pre-join repartitioning</td></tr>
+</table>
+
+<div class="callout model"><b class="tag">SAY THIS</b><span>"Coalesce avoids a shuffle by merging existing partitions, so it's cheap but can leave data unevenly distributed. Repartition does a full shuffle to redistribute data evenly, so it's expensive but necessary when I need more partitions or need to fix skew."</span></div>
+
+<!-- ============ SECTION 5 ============ -->
+<h2>5&nbsp;&nbsp;Data Skew — the #1 real-world PySpark problem</h2>
+<p><b>What it is:</b> some partitions hold way more data than others (a join/groupBy key is unevenly distributed — e.g. one <code>customer_id</code> owns 40% of orders). The task on that huge partition becomes the bottleneck — everything else finishes early and waits.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 640 100" width="100%" height="100">
+  <g font-size="8.4">
+  <rect x="10" y="20" width="130" height="45" rx="4" fill="#E5F1E8" stroke="#3B7A52"/><text x="75" y="38" text-anchor="middle">Task 1 · ~1M rows</text><text x="75" y="52" text-anchor="middle" fill="#3B7A52">✓ done 2 min</text>
+  <rect x="155" y="20" width="130" height="45" rx="4" fill="#E5F1E8" stroke="#3B7A52"/><text x="220" y="38" text-anchor="middle">Task 2 · ~1M rows</text><text x="220" y="52" text-anchor="middle" fill="#3B7A52">✓ done 2 min</text>
+  <rect x="300" y="20" width="180" height="45" rx="4" fill="#F3DCDC" stroke="#AD3F42"/><text x="390" y="38" text-anchor="middle">Task 3 · ~10M rows</text><text x="390" y="52" text-anchor="middle" fill="#AD3F42">🐌 still running…</text>
+  <rect x="495" y="20" width="130" height="45" rx="4" fill="#E5F1E8" stroke="#3B7A52"/><text x="560" y="38" text-anchor="middle">Task 4 · ~1M rows</text><text x="560" y="52" text-anchor="middle" fill="#3B7A52">✓ done 2 min</text>
+  </g>
+  <text x="320" y="88" text-anchor="middle" font-size="9" fill="#AD3F42" font-weight="bold">Whole stage waits on Task 3 → wasted cluster capacity</text>
+</svg>
+</div>
+
+<p><b>Detecting it:</b> Spark UI shows one task in a stage taking dramatically longer than the rest (a long tail in task duration). Symptoms: job "hangs" near the end, executor OOM on specific tasks, uneven shuffle read sizes.</p>
+
+<h3>Fix 1 — Adaptive Query Execution (AQE, Spark 3.0+)</h3>
+<p>AQE re-optimizes the query plan <b>at runtime</b> using real statistics from completed stages, instead of relying only on the pre-execution estimate.</p>
+<pre><code>spark.conf.set("spark.sql.adaptive.enabled", "true")               # default on in 3.2+
+spark.conf.set("spark.sql.adaptive.skewJoin.enabled", "true")
+spark.conf.set("spark.sql.adaptive.coalescePartitions.enabled", "true")</code></pre>
+
+<div class="diagram">
+<svg viewBox="0 0 640 110" width="100%" height="110">
+  <defs><marker id="a7" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#132038"/></marker></defs>
+  <g font-size="8.3">
+  <rect x="10" y="30" width="110" height="40" rx="5" fill="#fff" stroke="#132038"/><text x="65" y="54" text-anchor="middle">Stage 1 runs</text>
+  <path d="M120,50 L155,50" stroke="#132038" stroke-width="2" marker-end="url(#a7)"/>
+  <rect x="158" y="20" width="140" height="60" rx="5" fill="#E7F2F4" stroke="#1C7F97"/><text x="228" y="45" text-anchor="middle">AQE inspects</text><text x="228" y="59" text-anchor="middle">real runtime stats</text>
+  <path d="M298,50 L333,50" stroke="#132038" stroke-width="2" marker-end="url(#a7)"/>
+  <polygon points="335,50 375,20 415,50 375,80" fill="#FBF0DF" stroke="#C97A25"/>
+  <text x="375" y="47" text-anchor="middle" font-size="7.5">Skew or size</text>
+  <text x="375" y="58" text-anchor="middle" font-size="7.5">mismatch?</text>
+  <path d="M415,50 L450,50" stroke="#3B7A52" stroke-width="2" marker-end="url(#a7)"/>
+  <text x="432" y="42" font-size="7.5" fill="#3B7A52">yes</text>
+  <rect x="453" y="20" width="177" height="60" rx="5" fill="#E5F1E8" stroke="#3B7A52"/>
+  <text x="541" y="38" text-anchor="middle" font-size="7.6">Re-plan: split skewed</text>
+  <text x="541" y="50" text-anchor="middle" font-size="7.6">partitions / switch join /</text>
+  <text x="541" y="62" text-anchor="middle" font-size="7.6">coalesce tiny partitions</text>
+  <path d="M375,80 L375,100 L541,100 L541,80" stroke="#5A6478" stroke-width="1.6" fill="none" marker-end="url(#a7)"/>
+  <text x="458" y="98" font-size="7.5" fill="#5A6478">no → continue existing plan</text>
+  </g>
+</svg>
+</div>
+<p>AQE does three things automatically: (1) <b>coalesces</b> tiny post-shuffle partitions, (2) <b>splits</b> an oversized skewed partition so multiple tasks share the load, (3) <b>switches join strategy</b> (e.g. sort-merge → broadcast) if it discovers one side is actually small at runtime.</p>
+
+<h3>Fix 2 — Broadcast Joins</h3>
+<p>If one side of a join is small enough to fit in executor memory, send a <b>full copy of it to every executor</b> instead of shuffling both giant tables across the network.</p>
+<div class="diagram">
+<svg viewBox="0 0 640 110" width="100%" height="110">
+  <g font-size="8">
+  <text x="140" y="15" text-anchor="middle" fill="#5A6478">Sort-Merge Join (both large)</text>
+  <rect x="20" y="25" width="100" height="30" fill="#fff" stroke="#132038"/><text x="70" y="44" text-anchor="middle">Big table A</text>
+  <rect x="20" y="65" width="100" height="30" fill="#fff" stroke="#132038"/><text x="70" y="84" text-anchor="middle">Big table B</text>
+  <rect x="135" y="35" width="80" height="45" fill="#F3DCDC" stroke="#AD3F42"/><text x="175" y="55" text-anchor="middle" font-size="7.6">SHUFFLE</text><text x="175" y="66" text-anchor="middle" font-size="7.6">both sides</text>
+
+  <text x="470" y="15" text-anchor="middle" fill="#5A6478">Broadcast Join (one side small)</text>
+  <rect x="330" y="40" width="80" height="28" fill="#E7F2F4" stroke="#1C7F97"/><text x="370" y="58" text-anchor="middle" font-size="7.6">Small table</text>
+  <rect x="440" y="15" width="90" height="24" fill="#fff" stroke="#132038"/><text x="485" y="31" text-anchor="middle" font-size="7.3">Executor 1 + big part.</text>
+  <rect x="440" y="43" width="90" height="24" fill="#fff" stroke="#132038"/><text x="485" y="59" text-anchor="middle" font-size="7.3">Executor 2 + big part.</text>
+  <rect x="440" y="71" width="90" height="24" fill="#fff" stroke="#132038"/><text x="485" y="87" text-anchor="middle" font-size="7.3">Executor 3 + big part.</text>
+  <path d="M410,50 C420,30 430,27 438,27" stroke="#1C7F97" stroke-width="1.5" fill="none"/>
+  <path d="M410,54 L438,55" stroke="#1C7F97" stroke-width="1.5" fill="none"/>
+  <path d="M410,58 C420,75 430,80 438,83" stroke="#1C7F97" stroke-width="1.5" fill="none"/>
+  <text x="370" y="80" text-anchor="middle" font-size="7" fill="#1C7F97">copied whole to every executor</text>
+  </g>
+</svg>
+</div>
+<pre><code>from pyspark.sql.functions import broadcast
+df_result = big_orders_df.join(broadcast(small_customers_df), "customer_id")
+
+# auto-broadcast threshold (default 10MB)
+spark.conf.set("spark.sql.autoBroadcastJoinThreshold", 100 * 1024 * 1024)  # 100MB</code></pre>
+<p>No shuffle on the big table → big speedup for star-schema joins (fact + small dimension table). Only works if the small side genuinely fits comfortably in executor memory. Set threshold to <code>-1</code> to disable auto-broadcast for debugging.</p>
+
+<h3>Fix 3 — Salting (when both sides are large AND one key is skewed)</h3>
+<pre><code>import pyspark.sql.functions as F
+N = 10  # salt buckets
+
+skewed_df = skewed_df.withColumn("salt", (F.rand() * N).cast("int")) \
+                      .withColumn("salted_key", F.concat_ws("_", "join_key", "salt"))
+
+salt_range = spark.range(N).withColumnRenamed("id", "salt")
+other_df = other_df.crossJoin(salt_range) \
+                    .withColumn("salted_key", F.concat_ws("_", "join_key", "salt"))
+
+result = skewed_df.join(other_df, "salted_key")</code></pre>
+
+<h3>Join strategies — know all four</h3>
+<table>
+<tr><th>Strategy</th><th>When Spark uses it</th><th>Shuffle?</th></tr>
+<tr><td>Broadcast Hash Join</td><td>One side smaller than <code>autoBroadcastJoinThreshold</code></td><td>No (small side broadcast)</td></tr>
+<tr><td>Sort-Merge Join</td><td>Default for two large tables</td><td>Yes — full shuffle + sort</td></tr>
+<tr><td>Shuffle Hash Join</td><td>Sort-merge disabled or one side moderately smaller</td><td>Yes — shuffle, no sort</td></tr>
+<tr><td>Broadcast Nested Loop</td><td>No equi-join condition (fallback, avoid)</td><td>No shuffle but O(n×m) — very slow</td></tr>
+</table>
+
+<!-- ============ SECTION 6 ============ -->
+<h2>6&nbsp;&nbsp;Caching &amp; Persistence</h2>
+<p class="lead">Because Spark is lazy, reusing a DataFrame across 3 actions <b>recomputes it 3 times</b> from scratch — walking the whole lineage — unless you cache it.</p>
+<pre><code>df_expensive = df.filter(...).join(other_df, "key").groupBy("region").agg(F.sum("amount"))
+
+df_expensive.cache()          # shorthand for persist(MEMORY_AND_DISK)
+df_expensive.count()          # ACTION — this is what materializes the cache
+
+df_expensive.filter(F.col("region") == "US").show()     # reads from cache, fast
+df_expensive.filter(F.col("region") == "EU").show()     # reads from cache, fast
+
+df_expensive.unpersist()      # free memory when done</code></pre>
+
+<table>
+<tr><th>Storage Level</th><th>Where</th><th>Notes</th></tr>
+<tr><td><code>MEMORY_ONLY</code></td><td>RAM only</td><td>Fastest; recomputed if it doesn't fit</td></tr>
+<tr><td><code>MEMORY_AND_DISK</code></td><td>RAM, spills to disk</td><td>Default for <code>.cache()</code>; safer</td></tr>
+<tr><td><code>MEMORY_ONLY_SER</code></td><td>RAM, serialized</td><td>Saves space, costs CPU to (de)serialize</td></tr>
+<tr><td><code>DISK_ONLY</code></td><td>Disk only</td><td>Slow but never OOMs</td></tr>
+<tr><td><code>MEMORY_AND_DISK_2</code></td><td>Same + replicated on 2 nodes</td><td>Fault tolerance at a memory cost</td></tr>
+</table>
+
+<p><b>When to cache:</b> the DataFrame is reused multiple times (iterative algorithms, multiple actions, ML training loops). <b>Don't cache</b> something touched only once — pure overhead.</p>
+<div class="callout trap"><b class="tag">TRAP</b><span>Does <code>.cache()</code> execute immediately? <b>No</b> — like all transformations it's lazy; nothing is cached until an action runs afterward.</span></div>
+
+<!-- ============ SECTION 7 ============ -->
+<h2>7&nbsp;&nbsp;Shuffles — why they're the enemy</h2>
+<p>A <b>shuffle</b> = data physically moves across the network between executors, writes to disk, then gets re-read. Triggered by <code>groupBy()</code>, non-broadcast <code>join()</code>, <code>distinct()</code>, <code>repartition()</code>, <code>orderBy()</code> — disk I/O + network I/O + serialization. Minimizing shuffles is the single biggest lever for performance.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 640 90" width="100%" height="90">
+  <defs><marker id="a8" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#132038"/></marker></defs>
+  <g font-size="8">
+  <text x="120" y="16" text-anchor="middle" fill="#3B7A52" font-weight="bold">NARROW — no shuffle</text>
+  <rect x="30" y="26" width="55" height="26" fill="#fff" stroke="#132038"/><text x="57" y="43" text-anchor="middle">P1</text>
+  <path d="M85,39 L115,39" stroke="#3B7A52" stroke-width="2" marker-end="url(#a8)"/>
+  <rect x="118" y="26" width="55" height="26" fill="#E5F1E8" stroke="#3B7A52"/><text x="145" y="43" text-anchor="middle">P1'</text>
+  <rect x="30" y="58" width="55" height="26" fill="#fff" stroke="#132038"/><text x="57" y="75" text-anchor="middle">P2</text>
+  <path d="M85,71 L115,71" stroke="#3B7A52" stroke-width="2" marker-end="url(#a8)"/>
+  <rect x="118" y="58" width="55" height="26" fill="#E5F1E8" stroke="#3B7A52"/><text x="145" y="75" text-anchor="middle">P2'</text>
+
+  <text x="470" y="16" text-anchor="middle" fill="#AD3F42" font-weight="bold">WIDE — shuffle required</text>
+  <rect x="380" y="26" width="55" height="26" fill="#fff" stroke="#132038"/><text x="407" y="43" text-anchor="middle">P1</text>
+  <rect x="380" y="58" width="55" height="26" fill="#fff" stroke="#132038"/><text x="407" y="75" text-anchor="middle">P2</text>
+  <path d="M435,39 C460,39 460,55 480,55" stroke="#AD3F42" stroke-width="2" marker-end="url(#a8)" fill="none"/>
+  <path d="M435,71 C460,71 460,55 480,55" stroke="#AD3F42" stroke-width="2" marker-end="url(#a8)" fill="none"/>
+  <rect x="483" y="42" width="70" height="30" fill="#F3DCDC" stroke="#AD3F42"/><text x="518" y="61" text-anchor="middle" font-size="7.5">P1'+P2'</text>
+  </g>
+</svg>
+</div>
+
+<!-- ============ SECTION 8 ============ -->
+<h2>8&nbsp;&nbsp;Optimization Techniques — the interview checklist</h2>
+<p>Walk through these out loud as your "how would you optimize a slow Spark job" answer:</p>
+<ol style="margin:6px 0; padding-left:20px;">
+<li style="margin-bottom:5px;"><b>Use DataFrame/SQL API over RDDs</b> — gets you Catalyst + Tungsten for free.</li>
+<li style="margin-bottom:5px;"><b>Predicate &amp; column pruning</b> — filter/select early so Catalyst can push filters down to the file scan.</li>
+<li style="margin-bottom:5px;"><b>Use columnar file formats</b> — Parquet/ORC over CSV/JSON: compressed, columnar reads, schema-aware, supports predicate pushdown.</li>
+<li style="margin-bottom:5px;"><b>Partition data on disk</b> by commonly-filtered columns (e.g. <code>date</code>) — enables partition pruning, skipping whole folders.</li>
+<li style="margin-bottom:5px;"><b>Bucketing</b> — pre-shuffle by a join/groupBy key at write time so future joins avoid a shuffle entirely.</li>
+<li style="margin-bottom:5px;"><b>Broadcast joins</b> for small dimension tables.</li>
+<li style="margin-bottom:5px;"><b>Avoid UDFs</b> when a built-in exists — they're a black box to Catalyst and pay a JVM↔Python serialization cost. Prefer <b>Pandas (vectorized) UDFs</b> if you must use Python.</li>
+<li style="margin-bottom:5px;"><b>Cache reused intermediate results</b> — but unpersist when done.</li>
+<li style="margin-bottom:5px;"><b>Right-size partitions</b> — target ~100–200MB per partition. Too few = underutilized cluster; too many = scheduling overhead dominates.</li>
+<li style="margin-bottom:5px;"><b>Avoid <code>collect()</code> on large data</b> — pulls everything to driver memory; use <code>take(n)</code> or write to storage instead.</li>
+<li style="margin-bottom:5px;"><b>Handle skew</b> — AQE, broadcast joins, salting.</li>
+<li style="margin-bottom:5px;"><b>Tune <code>spark.sql.shuffle.partitions</code></b> (default 200) — often wrong for your data size; AQE's coalescePartitions mitigates this.</li>
+<li><b>Use <code>explain()</code></b> to verify the optimizer did what you expect.</li>
+</ol>
+
+<!-- ============ SECTION 9 ============ -->
+<h2>9&nbsp;&nbsp;Quick-fire interview Q&amp;A</h2>
+<div class="qa"><div class="q">Q: Why is Spark faster than Hadoop MapReduce?</div><div class="a">In-memory computation between stages (vs disk writes every step in MR), a DAG execution engine, and the Catalyst/Tungsten optimizer.</div></div>
+<div class="qa"><div class="q">Q: repartition() vs partitionBy()?</div><div class="a"><code>repartition()</code> redistributes in-memory partitions. <code>partitionBy()</code> is used at write time to organize output into folders on disk by column value (e.g. <code>/year=2026/month=08/</code>), enabling partition pruning on future reads.</div></div>
+<div class="qa"><div class="q">Q: What causes OutOfMemory and how do you fix it?</div><div class="a">Usually skew, too few partitions, collecting too much to the driver, or over-caching. Fixes: repartition/salt, avoid unnecessary <code>collect()</code>, tune executor memory, use <code>MEMORY_AND_DISK</code> instead of <code>MEMORY_ONLY</code>.</div></div>
+<div class="qa"><div class="q">Q: What is lineage/DAG used for besides planning?</div><div class="a">Fault tolerance — if an executor is lost, Spark recomputes only the lost partitions via lineage instead of restarting the whole job.</div></div>
+<div class="qa"><div class="q">Q: groupBy().count() vs countDistinct() — which is heavier?</div><div class="a">Both shuffle, but distinct counting on high-cardinality columns is heavier — consider <code>approx_count_distinct</code> when exactness isn't required.</div></div>
+<div class="qa"><div class="q">Q: When would you avoid coalesce(1)?</div><div class="a">When writing a large dataset — 1 task does all the write work serially, killing parallelism. Fine only for genuinely small outputs.</div></div>
+
+<!-- ============ SECTION 10 ============ -->
+<h2>10&nbsp;&nbsp;One-page cheat sheet</h2>
+<pre><code># Read
+df = spark.read.schema(my_schema).parquet("path")   # explicit schema > inferSchema in prod
+df.explain(True)                                     # inspect the plan
+
+# Partitioning
+df.repartition(200)                 # full shuffle, even sizes, can increase
+df.repartition("customer_id")       # repartition BY column — co-locates keys before a join
+df.coalesce(1)                      # cheap merge, decrease only, uneven sizes
+
+# Broadcast join
+from pyspark.sql.functions import broadcast
+big.join(broadcast(small), "key")
+
+# AQE (Spark 3.0+, default on in 3.2+)
+spark.conf.set("spark.sql.adaptive.enabled", "true")
+spark.conf.set("spark.sql.adaptive.skewJoin.enabled", "true")
+spark.conf.set("spark.sql.adaptive.coalescePartitions.enabled", "true")
+
+# Caching
+df.cache()                              # = persist(MEMORY_AND_DISK)
+df.persist(StorageLevel.MEMORY_ONLY)
+df.unpersist()
+
+# Write with partitioning + bucketing
+df.write.partitionBy("year", "month").parquet("path")
+df.write.bucketBy(8, "customer_id").saveAsTable("bucketed_table")
+
+# Vectorized (Pandas) UDF — prefer over row-at-a-time UDF
+from pyspark.sql.functions import pandas_udf
+@pandas_udf("double")
+def add_tax(price: "pd.Series") -> "pd.Series":
+    return price * 1.18</code></pre>
+
+<div class="footer-note"><b>How to use this document:</b> Read Sections 1, 4, 5, and 6 first — architecture, coalesce/repartition, skew/AQE/broadcast, and caching come up in almost every PySpark data-engineering interview. Sections 7–9 separate a "knows the API" answer from a "has actually debugged a slow Spark job" answer — lead with those on open-ended optimization questions.</div>
+
+</body>
+</html>
